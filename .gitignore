@@ -192,3 +192,8 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Add DS_Store files to ignore list
+#  DS_Store files are created by macOS to store custom attributes of a folder.
+#  They can be safely ignored in version control.
+.DS_Store   

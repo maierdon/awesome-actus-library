@@ -1,8 +1,12 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="awesome_actus_lib",
-    version="0.1.0",
-    packages=find_packages(include=["awesome_actus_lib", "awesome_actus_lib.*"]),
-    install_requires=[],
+    name="awesome-actus-lib",
+    version="1.0.0",
+    description="Modular Python Package for Financial Contract Modelling with the ACTUS Standard",
+    author="maierdon",
+    author_email="whyaxis21@gmail.com",
+    packages=find_packages(),
+    include_package_data=True,
+    python_requires=">=3.8",
 )

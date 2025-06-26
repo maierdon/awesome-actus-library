@@ -1,22 +1,31 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "awesome_actus_lib"
-version = "0.1.0"
-description = "Package for Financial Contract Modelling with the ACTUS Standard"
-authors = [{ name = "Ovomaltiner", email = "whyaxis21@gmail.com" }]
+version = "1.0.0"
+description = "Modular Python Package for Financial Contract Modelling with the ACTUS Standard"
+authors = [{ name = "maierdon", email = "whyaxis21@gmail.com" }]
 readme = "README.md"
 license = { file = "LICENSE" }
 dependencies = [
-    "requests",
-    "numpy",
+    "numpy>=1.22",
+    "pandas>=1.4",
+    "matplotlib>=3.5",
+    "python-dateutil"
 ]
-requires-python = ">=3.7"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent"
+]
+requires-python = ">=3.8"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/your_package"
-Documentation = "https://your_package.readthedocs.io/"
-Repository = "https://github.com/yourusername/your_package"
-Issues = "https://github.com/yourusername/your_package/issues"
+Homepage = "https://github.com/maierdon/awesome_actus_lib"
+Documentation = "https://awesomeactuslibrarydoc.vercel.app"
+Issues = "https://github.com/maierdon/awesome_actus_lib/issues"

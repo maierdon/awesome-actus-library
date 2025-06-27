@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "awesome_actus_lib"
-version = "1.0.1"
+version = "1.0.2"
 description = "Modular Python Package for Financial Contract Modelling with the ACTUS Standard"
 authors = [{ name = "maierdon", email = "whyaxis21@gmail.com" }]
 readme = "README.md"

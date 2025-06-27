@@ -1,5 +1,5 @@
 # Awesome ACTUS Library
-
+I would change this to pyactus;D
 A modular user-friendly Python Library for Financial Modelling with the ACTUS Standard.
 
 ## Features

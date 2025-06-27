@@ -1,10 +1,13 @@
-import requests
 import json
+
 import pandas as pd
+import requests
+
 from ..models.cashFlowStream import CashFlowStream
 from ..models.contract_terms_generated import *
-from ..models.portfolio import Portfolio
 from ..models.contractModel import ContractModel
+from ..models.portfolio import Portfolio
+
 
 class ActusService:
     """
@@ -67,11 +70,11 @@ class ActusService:
             "riskFactors": serialized_risk_factors
         }
         # print(f"[DEBUG] Sending payload:{payload} to /eventsBatch:")
-        print("\n[DEBUG] curl command to test manually:\n")
-        print(
-            "curl -v -H \"Content-Type: application/json\" -X POST "
-            f"-d '{json.dumps(payload)}' {self.serverURL}/eventsBatch"
-        )
+        # print("\n[DEBUG] curl command to test manually:\n")
+        # print(
+        #     "curl -v -H \"Content-Type: application/json\" -X POST "
+        #     f"-d '{json.dumps(payload)}' {self.serverURL}/eventsBatch"
+        # )
 
         response = requests.post(
             url=f"{self.serverURL}/eventsBatch",
@@ -96,7 +99,7 @@ class ActusService:
     
     def _validate_rate_reset_risk_factor_coverage(self, portfolio: Portfolio, riskFactors: list):
         rf_map = {rf.marketObjectCode: rf for rf in riskFactors if hasattr(rf, "marketObjectCode") and hasattr(rf, "_data")}
-        print("[DEBUG] Running rate reset risk factor coverage validation")
+        # print("[DEBUG] Running rate reset risk factor coverage validation")
         for contract in portfolio.contracts:
             contract_id = contract.terms.get("contractID", None)
             mkt_code = contract.terms.get("marketObjectCodeOfRateReset", None)
@@ -106,9 +109,9 @@ class ActusService:
             contract_id = contract_id.value if contract_id else "<unknown>"
             mkt_code = mkt_code.value if mkt_code else None
             anchor_date_str = anchor_date_str.value if anchor_date_str else None
-            print(f"[DEBUG] Before if cntid:{contract_id}, mktcode:{mkt_code}, ancdat:{anchor_date_str}")
+            # print(f"[DEBUG] Before if cntid:{contract_id}, mktcode:{mkt_code}, ancdat:{anchor_date_str}")
             if mkt_code and anchor_date_str:
-                print("[DEBUG] After if")
+                # print("[DEBUG] After if")
                 rf = rf_map.get(mkt_code)
                 if rf is None:
                     raise ValueError(f"Contract '{contract_id}' references missing risk factor '{mkt_code}'")
@@ -117,9 +120,9 @@ class ActusService:
                     rf_dates = list(pd.to_datetime(rf._data["date"]).dt.date)
                 except Exception:
                     raise ValueError(f"Risk factor '{mkt_code}' for contract '{contract_id}' has invalid or missing date data")
-                print("HELLO WORLD")
+                # print("HELLO WORLD")
                 anchor_date = pd.to_datetime(anchor_date_str).date()
-                print(f"[DEBUG] Anchor date = {anchor_date}, RF dates = {[str(d) for d in rf_dates]}")
+                # print(f"[DEBUG] Anchor date = {anchor_date}, RF dates = {[str(d) for d in rf_dates]}")
                 if not any(d <= anchor_date for d in rf_dates):
                     raise ValueError(
                         f"Risk factor '{mkt_code}' does not cover required rate reset anchor date (cycleAnchorDateOfRateReset): {anchor_date} "
@@ -277,6 +280,12 @@ class RiskService:
         response = requests.get(f"{self.serverURL}/findAllScenarios")
         response.raise_for_status()
         return response.json()
+    
+class PublicRiskService(RiskService):
+    def __init__(self):
+        super().__init__(
+            serverURL="https://dadfir3-riskservice.zhaw.ch/"
+        )
 
 
 

@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 
+
 def portfolioPlot(events_df, title="Portfolio Cashflows", y1_label="Payoff", return_fig=False):
     """
     Plots portfolio-level cashflows as a stacked bar chart aggregated by event type and adaptive time binning.

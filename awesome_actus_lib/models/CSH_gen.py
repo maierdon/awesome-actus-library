@@ -1,7 +1,9 @@
 from datetime import datetime
-from typing import Optional, Any, Union
-from .contractModel import ContractModel
+from typing import Union
+
 from .contract_terms_generated import *
+from .contractModel import ContractModel
+
 
 class CSH(ContractModel):
     """ACTUS Contract Type: CSH

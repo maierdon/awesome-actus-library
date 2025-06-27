@@ -1,7 +1,9 @@
-import pandas as pd
 import numpy as np
-from ..models.RiskFactor import ReferenceIndex, YieldCurve  
+import pandas as pd
+
+from ..models.RiskFactor import ReferenceIndex, YieldCurve
 from .Analysis import Analysis
+
 
 class ValueAnalysis(Analysis):
     """

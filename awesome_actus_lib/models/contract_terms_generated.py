@@ -1,5 +1,6 @@
 from datetime import datetime
 
+
 class ContractTerm:
     """Abstract Class for Contract Terms."""
     def __init__(self, termName, value):
@@ -14,15 +15,12 @@ class ContractTerm:
 
 class ActusTerm(ContractTerm):
     """Base class for ACTUS-defined contract terms."""
-    pass
 
 class RiskFactorReferenceTerm(ActusTerm):
     """Base class for ACTUS terms that reference a Risk Factor."""
-    pass
     
 class UserDefinedTerm(ContractTerm):
     """Base class for user-defined terms (not used by ACTUS simulation)."""
-    pass
 
 
 class AccruedInterest(ActusTerm):

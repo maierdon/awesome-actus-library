@@ -1,10 +1,8 @@
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from matplotlib.dates import date2num
+
 from .contractPlot import contractPlot
 from .portfolioPlot import portfolioPlot
+
 
 class CashFlowStream:
     """
@@ -37,7 +35,7 @@ class CashFlowStream:
             return collected
 
         all_events = []
-        print(f"[DEBUG] Raw Response from generateeEvents: {response}")
+        #print(f"[DEBUG] Raw Response from generateEvents: {response}")
         for contract_result in response:
             all_events.extend(collect_all_events(contract_result))
 

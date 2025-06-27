@@ -1,8 +1,8 @@
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
-from ..models.RiskFactor import ReferenceIndex
+import pandas as pd
+
 from .Analysis import Analysis
+
 
 class IncomeAnalysis(Analysis):
     def __init__(self, cf_stream, freq="M", start=None, end=None):

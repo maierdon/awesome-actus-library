@@ -1,8 +1,7 @@
 from abc import ABC
+
 import pandas as pd
-from ..models.RiskFactor import ReferenceIndex, YieldCurve
-import numpy as np
-import matplotlib.pyplot as plt
+
 
 class Analysis(ABC):
     def __init__(self, cf_stream):
@@ -21,7 +20,6 @@ class Analysis(ABC):
         Optional analysis method for subclasses that support a direct analysis step.
         ValueAnalysis uses explicit value methods instead.
         """
-        pass
 
     def to_dataframe(self) -> pd.DataFrame:
         """

@@ -1,7 +1,9 @@
-import pandas as pd
 import os
-from awesome_actus_lib.models.contract_terms_generated import *
+
+import pandas as pd
+
 from awesome_actus_lib.models.contractModel import ContractModel
+
 
 class Portfolio:
     """

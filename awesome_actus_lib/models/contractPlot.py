@@ -1,8 +1,10 @@
+from collections import defaultdict
+
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from collections import defaultdict
+
 
 def initialize_graph(*dfs, contract_type, title, y1_label="Notional/Principal", y2_label="Interest Payments"):
     if contract_type.lower() in ["swap", "future", "option"]:

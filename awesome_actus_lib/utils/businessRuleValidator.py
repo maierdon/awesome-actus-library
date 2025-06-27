@@ -1,6 +1,9 @@
-from awesome_actus_lib.utils.actus_applicability_rules_grouped import APPLICABILITY_RULES
+import math
+
+from awesome_actus_lib.utils.actus_applicability_rules_grouped import \
+    APPLICABILITY_RULES
 from awesome_actus_lib.utils.utils import get_long_name_for_acronym
-import math 
+
 
 class BusinessRuleValidator:
     def __init__(self):

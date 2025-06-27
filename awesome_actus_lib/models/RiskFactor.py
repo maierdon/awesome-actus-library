@@ -1,9 +1,11 @@
-import pandas as pd
+import re
 from abc import ABC, abstractmethod
 from datetime import date, timedelta
-import re
-from dateutil.relativedelta import relativedelta
+
 import matplotlib.pyplot as plt
+import pandas as pd
+from dateutil.relativedelta import relativedelta
+
 
 class RiskFactor(ABC):
     """
@@ -104,7 +106,6 @@ class RiskFactor(ABC):
         Serialize the risk factor data to JSON (to be used by event generation).
         Must be implemented by subclasses.
         """
-        pass
 
     def __repr__(self):
         return f"<{self.__class__.__name__} code='{self.marketObjectCode}' rows={len(self._data) if self._data is not None else 0}>"

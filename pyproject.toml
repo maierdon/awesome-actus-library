@@ -10,11 +10,13 @@ authors = [{ name = "maierdon", email = "whyaxis21@gmail.com" }]
 readme = "README.md"
 license = { file = "LICENSE" }
 dependencies = [
-    "numpy>=1.22",
-    "pandas>=1.4",
-    "matplotlib>=3.5",
-    "python-dateutil"
+    "matplotlib>=3.5.2",
+    "numpy>=1.24.2",
+    "pandas>=1.4.2",
+    "python-dateutil>=2.9.0.post0",
+    "requests>=2.32.4"
 ]
+
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",

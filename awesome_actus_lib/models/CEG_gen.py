@@ -1,7 +1,9 @@
 from datetime import datetime
-from typing import Optional, Any, Union
-from .contractModel import ContractModel
+from typing import Any, Optional, Union
+
 from .contract_terms_generated import *
+from .contractModel import ContractModel
+
 
 class CEG(ContractModel):
     """ACTUS Contract Type: CEG

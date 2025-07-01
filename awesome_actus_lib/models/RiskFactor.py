@@ -5,6 +5,7 @@ from datetime import date, timedelta
 import matplotlib.pyplot as plt
 import pandas as pd
 from dateutil.relativedelta import relativedelta
+from collections import Counter
 
 
 class RiskFactor(ABC):
@@ -174,6 +175,10 @@ class YieldCurve(RiskFactor):
     def _validate_inputs(self):
         if len(self.tenors) != len(self.rates):
             raise ValueError("Tenors and rates must be of the same length.")
+        
+        duplicates = [tenor for tenor, count in Counter(self.tenors).items() if count > 1]
+        if duplicates:
+            raise ValueError(f"Tenors must be unique. Duplicated entries: {', '.join(duplicates)}")
 
         for t in self.tenors:
             if not re.fullmatch(r"\d+[DWMY]", t):

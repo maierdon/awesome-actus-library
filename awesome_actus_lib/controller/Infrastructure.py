@@ -147,7 +147,13 @@ class ActusService:
             raise ValueError(f"Scenario '{scenarioID}' does not exist in the RiskService")
 
         scenario_data = response.json()
-        scenario_rfs = {rf["riskFactorID"] for rf in scenario_data.get("riskFactorDescriptors", [])}
+        scenario_rfIDs = {rf["riskFactorID"] for rf in scenario_data.get("riskFactorDescriptors", [])}
+        scenario_rfs = set()
+        for rfID in scenario_rfIDs:
+            rfURL_url = f"{riskService.serverURL}/findReferenceIndex/{rfID}"
+            response_RF = requests.get(rfURL_url).json()
+            print(response_RF)
+            scenario_rfs.add(response_RF.get("marketObjectCode", []))
 
         # Step 2: Validate risk factors referenced in the portfolio
         required_rfs = self.extract_required_risk_factors(portfolio)
@@ -224,8 +230,8 @@ class RiskService:
             data=json.dumps(rf_data)
         )
         response.raise_for_status()
-        print(response.text)
-        return response.status_code
+        # print(response.text)
+        return response.text
 
 
     def delete_reference_index(self, riskFactorID: str):

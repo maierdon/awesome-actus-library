@@ -4,7 +4,6 @@ import pandas as pd
 
 from awesome_actus_lib.models.contractModel import ContractModel
 
-
 class Portfolio:
     """
     A portfolio of one or more ACTUS contracts.
@@ -46,7 +45,7 @@ class Portfolio:
             ct = term_dict.get("contractType")
             if not ct:
                 raise ValueError("Missing 'contractType' in one of the rows.")
-
+            _import_contract_class(ct)
             contract_class = globals().get(ct)
             if not contract_class:
                 raise ValueError(f"Unknown contract type class: '{ct}'")
@@ -75,3 +74,10 @@ class Portfolio:
 
     def __repr__(self):
         return f"<Portfolio({len(self.contracts)} contracts)>"
+
+def _import_contract_class(ct: str):
+    """Import the contract class <ct> from awesome_actus_lib.models.<ct>_gen if not already loaded."""
+    ct = ct.strip()
+    if ct not in globals():
+        mod = __import__(f"{__package__}.{ct}_gen", fromlist=[ct])
+        globals()[ct] = getattr(mod, ct)

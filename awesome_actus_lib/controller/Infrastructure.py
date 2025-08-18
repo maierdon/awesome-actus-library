@@ -48,6 +48,8 @@ class ActusService:
                 ):
                     contract_data[key] = value + "T00:00:00"
             contract_dicts.append(contract_data)
+        required_rfs = self.extract_required_risk_factors(portfolio=portfolio)
+        
 
         # Convert RiskFactor instances to JSON
         serialized_risk_factors = []
@@ -62,6 +64,10 @@ class ActusService:
                     serialized_risk_factors.append(rf)
                 else:
                     raise TypeError(f"Invalid risk factor type: {type(rf)}. Must be a RiskFactor or dict.")
+            provided_rfs = {rf.marketObjectCode for rf in riskFactors}
+            missing = required_rfs - provided_rfs
+            if missing:
+                raise ValueError(f"The following risk factors are missing from simulation request: {', '.join(missing)}")
         
         # DEBUG
         # print(serialized_risk_factors)

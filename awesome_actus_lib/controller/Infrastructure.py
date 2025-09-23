@@ -110,11 +110,13 @@ class ActusService:
             contract_id = contract.terms.get("contractID", None)
             mkt_code = contract.terms.get("marketObjectCodeOfRateReset", None)
             anchor_date_str = contract.terms.get("cycleAnchorDateOfRateReset", None)
+            status_date_str = contract.terms.get("statusDate", None)
 
             # unwrap term values if present
             contract_id = contract_id.value if contract_id else "<unknown>"
             mkt_code = mkt_code.value if mkt_code else None
             anchor_date_str = anchor_date_str.value if anchor_date_str else None
+            status_date_str = status_date_str.value if status_date_str else None
             # print(f"[DEBUG] Before if cntid:{contract_id}, mktcode:{mkt_code}, ancdat:{anchor_date_str}")
             if mkt_code and anchor_date_str:
                 # print("[DEBUG] After if")
@@ -128,10 +130,16 @@ class ActusService:
                     raise ValueError(f"Risk factor '{mkt_code}' for contract '{contract_id}' has invalid or missing date data")
                 # print("HELLO WORLD")
                 anchor_date = pd.to_datetime(anchor_date_str).date()
+                status_date = pd.to_datetime(status_date_str).date()
                 # print(f"[DEBUG] Anchor date = {anchor_date}, RF dates = {[str(d) for d in rf_dates]}")
-                if not any(d <= anchor_date for d in rf_dates):
+
+                req_start_date = anchor_date
+                if status_date > anchor_date:
+                    req_start_date = status_date
+                    
+                if not any(d <= req_start_date for d in rf_dates):
                     raise ValueError(
-                        f"Risk factor '{mkt_code}' does not cover required rate reset anchor date (cycleAnchorDateOfRateReset): {anchor_date} "
+                        f"Risk factor '{mkt_code}' does not cover required start date (cycleAnchorDateOfRateReset or statusDate): {req_start_date} "
                         f"for contract '{contract_id}'"
                     )
 

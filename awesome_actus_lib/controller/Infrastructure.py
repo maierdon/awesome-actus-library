@@ -161,7 +161,8 @@ class ActusService:
             raise ValueError(f"Scenario '{scenarioID}' does not exist in the RiskService")
 
         scenario_data = response.json()
-        scenario_rfIDs = {rf["riskFactorID"] for rf in scenario_data.get("riskFactorDescriptors", [])}
+        descriptors = scenario_data.get("riskFactorDescriptors", [])
+        scenario_rfIDs = {d["riskFactorID"] for d in descriptors if d.get("riskFactorType") == "ReferenceIndex"}
         scenario_rfs = set()
         for rfID in scenario_rfIDs:
             rfURL_url = f"{riskService.serverURL}/findReferenceIndex/{rfID}"

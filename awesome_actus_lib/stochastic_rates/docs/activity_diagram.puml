@@ -1,0 +1,158 @@
+@startuml activity_diagram
+skinparam style strictuml
+
+title Activity Diagram: Workflow from Market Data to ACTUS Simulation
+
+|#LightBlue|User|
+|#LightGreen|Calibration|
+|#LightYellow|Models|
+|#LightCoral|Integration|
+|#LightGray|ACTUS|
+
+|User|
+start
+:Acquire market data;
+note right
+  - ZCB prices from Bloomberg/Reuters
+  - Or spot rates from SNB/ECB
+  - Tenors: 1M, 3M, 6M, 1Y, 2Y, ...
+end note
+
+|Calibration|
+:CurveCalibrator.from_market(
+  times, spot_rates/zcb_prices);
+
+fork
+  :Validate inputs;
+  if (Data correct?) then (yes)
+  else (no)
+    |User|
+    :Fix data;
+    stop
+  endif
+fork again
+  :NaturalCubicSpline1D.fit();
+  note right
+    Interpolation using a
+    natural cubic spline
+  end note
+end fork
+
+:Calibrator ready;
+
+|User|
+:Choose model;
+note right
+  **Decision criteria:**
+  - Short-term → Ho–Lee
+  - Long-term → Hull–White
+  - Non-negative rates → CIR
+  - Benchmark → Vasicek
+end note
+
+|Models|
+:factory.create_model(
+  model_type, params, calibrator);
+
+if (Model = HoLee or HullWhite?) then (yes)
+  :Inject calibrator;
+else (no)
+  :Model parameters only;
+endif
+
+:ShortRateModel instantiated;
+
+|User|
+:Set simulation parameters;
+note right
+  - T = time horizon (years)
+  - M = number of time steps
+  - I = number of paths
+end note
+
+|Models|
+:model.simulate(T, M, I);
+
+repeat
+  :Time step k;
+  if (Model has theta(t)?) then (yes)
+    |Calibration|
+    :forward_rate(t);
+    :forward_rate_slope(t);
+    |Models|
+    :Compute theta(t);
+  endif
+  :Euler–Maruyama step;
+  :r[k] = drift + diffusion;
+repeat while (k < M)
+
+:SimulationResult created;
+
+|User|
+if (Validation desired?) then (yes)
+  |Models|
+  :validate_against_analytical();
+  :Compare MC vs analytical;
+  if (Rel. Error < 1%?) then (yes)
+    :✓ Validation OK;
+  else (no)
+    :⚠ Issue warning;
+    note right
+      Use more paths or
+      smaller time steps
+    end note
+  endif
+endif
+
+|User|
+:Statistical analysis;
+
+|Models|
+fork
+  :sim.mean_path();
+fork again
+  :sim.percentile_path(5);
+  :sim.percentile_path(95);
+fork again
+  :sim.statistics();
+end fork
+
+|User|
+:Generate ACTUS scenarios;
+
+|Integration|
+:simulation_to_scenarios(
+  sim, base_date, market_code,
+  freq, max_scenarios);
+
+:Parse frequency;
+:Generate calendar dates;
+
+repeat
+  :Path j → ReferenceIndex;
+  :DataFrame with date/value;
+repeat while (j < max_scenarios)
+
+:ScenarioSet created;
+
+|ACTUS|
+:For each contract in the portfolio;
+
+repeat
+  :ReferenceIndex.to_json();
+  :Generate events with
+  variable rate path;
+  :Compute cashflows;
+repeat while (more contracts)
+
+|User|
+:Risk analysis;
+note right
+  - Present value distribution
+  - VaR / CVaR
+  - Sensitivities
+end note
+
+stop
+
+@enduml

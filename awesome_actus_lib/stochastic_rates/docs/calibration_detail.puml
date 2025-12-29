@@ -1,0 +1,130 @@
+@startuml calibration_detail
+skinparam style strictuml
+skinparam classAttributeIconSize 0
+
+title Detailed Class Diagram: Calibration Module
+
+package "calibration" {
+
+    class CurveCalibrator <<dataclass, frozen>> {
+        __ Stored curve data __
+        + times: ndarray
+        + P: ndarray
+        + R: ndarray
+        + t_min: float
+        + t_max: float
+        + P_0_tmax: float
+        + F_0_tmax: float
+        + extrapolation_mode: Literal["flat", "strict"]
+        -
+        - _spline_R: NaturalCubicSpline1D
+        __
+        __ Factory method __
+        + {static} from_market(times, zcb_prices?, spot_rates?, extrapolation_mode): CurveCalibrator
+        __
+        __ Curve queries __
+        + spot_rate(t: float | ndarray): float | ndarray
+        + zcb_price(t: float | ndarray): float | ndarray
+        + forward_rate(t: float | ndarray): float | ndarray
+        + forward_rate_slope(t: float | ndarray): float | ndarray
+        __
+        __ Internal methods __
+        - _check_extrapolation(t: ndarray): void
+    }
+
+    note top of CurveCalibrator
+      **Mathematical relationships:**
+
+      Spot rate: R(t) = -ln(P(t)) / t
+
+      ZCB price: P(t) = exp(-R(t) · t)
+
+      Forward rate: F(0,t) = R(t) + t · dR/dt
+
+      Forward slope: dF/dt = 2·dR/dt + t·d²R/dt²
+
+      **Extrapolation (t > t_max):**
+      Flat-forward: P(t) = P(t_max) · exp(-F(t_max)·(t-t_max))
+    end note
+
+    class NaturalCubicSpline1D <<dataclass, frozen>> {
+        __ Spline data __
+        + x: ndarray
+        + y: ndarray
+        + m: ndarray
+        __
+        __ Factory method __
+        + {static} fit(x: Iterable, y: Iterable): NaturalCubicSpline1D
+        __
+        __ Evaluation __
+        + evaluate(xq: float | ndarray): float | ndarray
+        + evaluate_first_derivative(xq: float | ndarray): float | ndarray
+        + evaluate_second_derivative(xq: float | ndarray): float | ndarray
+        __
+        __ Internal methods __
+        - _interval_indices(xq: ndarray): ndarray
+    }
+
+    note bottom of NaturalCubicSpline1D
+      **Natural cubic spline:**
+
+      S_i(x) = a_i + b_i(x-x_i) + c_i(x-x_i)² + d_i(x-x_i)³
+
+      **Boundary conditions:**
+      S''(x_0) = 0  (natural)
+      S''(x_n) = 0  (natural)
+
+      **Properties:**
+      - C² continuous
+      - Minimizes ∫[S''(x)]² dx
+      - No oscillations
+
+      **Implementation:**
+      Tridiagonal system solved
+      with the Thomas algorithm
+    end note
+
+    CurveCalibrator *-right- NaturalCubicSpline1D : interpolates with
+}
+
+package "Usage in Models" #LightGray {
+    class HoLee {
+        + cal: CurveCalibrator
+        __
+        + theta(t): float
+    }
+
+    class HullWhite {
+        + cal: CurveCalibrator
+        __
+        + theta(t): float
+    }
+
+    note bottom of HoLee
+      θ(t) = dF/dt + σ²·t
+    end note
+
+    note bottom of HullWhite
+      θ(t) = dF/dt + a·F + (σ²/2a)·(1-e^{-2at})
+    end note
+}
+
+HoLee --> CurveCalibrator : uses
+HullWhite --> CurveCalibrator : uses
+
+package "Input Formats" #LightYellow {
+    class "ZCB Prices" as ZCB <<input>> {
+        times: [0.25, 0.5, 1, 2, 5, 10]
+        prices: [0.99, 0.98, 0.96, 0.92, 0.82, 0.67]
+    }
+
+    class "Spot Rates" as Spot <<input>> {
+        times: [0.25, 0.5, 1, 2, 5, 10]
+        rates: [0.04, 0.04, 0.041, 0.042, 0.04, 0.04]
+    }
+}
+
+ZCB ..> CurveCalibrator : from_market(zcb_prices=...)
+Spot ..> CurveCalibrator : from_market(spot_rates=...)
+
+@enduml

@@ -1,0 +1,216 @@
+@startuml mvc_model_controller
+skinparam style strictuml
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam defaultFontSize 11
+skinparam noteFontSize 10
+skinparam shadowing false
+
+title MVC Class Diagram: Model + Controller
+
+' ============================================
+' Shared styling
+' ============================================
+skinparam class {
+  BackgroundColor #FAFAFA
+  BorderColor #666666
+  ArrowColor #444444
+}
+
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+}
+
+' ============================================
+' MODEL LAYER (Green)
+' ============================================
+package "Model Layer" #E8F5E9 {
+
+  abstract class ContractModel #C8E6C9 {
+    - terms: Dict[str, ContractTerm]
+    + __init__(term_dict: Dict[str, ContractTerm])
+    + getTerm(termName: str): ContractTerm
+    + to_json(): dict
+    + check_time_consistency_rules(): void
+    + {abstract} validate_terms(): void
+  }
+
+  abstract class ContractTerm #FFF9C4 {
+    - name: str
+    - value: Any
+    + __init__(name: str, value: Any)
+  }
+
+  abstract class ACTUSTerm #FFF9C4 {
+    + __init__(name: str, value: Any)
+  }
+
+  abstract class UserDefinedTerm #FFF9C4 {
+    + __init__(name: str, value: Any)
+  }
+
+  ContractTerm <|-- ACTUSTerm
+  ContractTerm <|-- UserDefinedTerm
+
+  ContractModel "1" o-- "*" ContractTerm : terms
+
+  class PAM #C8E6C9 {
+    + __init__(terms: List[ContractTerm])
+    + validate_terms(): void
+  }
+
+  class ANN #C8E6C9 {
+    + __init__(terms: List[ContractTerm])
+    + validate_terms(): void
+  }
+
+  ContractModel <|-- PAM
+  ContractModel <|-- ANN
+
+  ' Example ACTUS Terms
+  class NotionalPrincipal #FFF9C4 {
+    + __init__(value: float)
+  }
+  class ContractID #FFF9C4 {
+    + __init__(value: str)
+  }
+  class NominalInterestRate #FFF9C4 {
+    + __init__(value: float)
+  }
+
+  ACTUSTerm <|-- NotionalPrincipal
+  ACTUSTerm <|-- ContractID
+  ACTUSTerm <|-- NominalInterestRate
+
+  ' Example User Defined Terms
+  class CreditRatingCustomer #FFF9C4 {
+    + __init__(value: str)
+  }
+  class WeatherOnDealDate #FFF9C4 {
+    + __init__(value: str)
+  }
+
+  UserDefinedTerm <|-- CreditRatingCustomer
+  UserDefinedTerm <|-- WeatherOnDealDate
+
+  ' Risk Factors
+  abstract class RiskFactor #BBDEFB {
+    - marketObjectCode: str
+    + __init__(marketObjectCode: str, source: Any)
+    + loadData(source: str | DataFrame): void
+    + plot(title: str, figsize: tuple, return_fig: bool): void
+    + _validate_and_format_dates(date_column: str): Series
+    + {abstract} to_json(): dict
+  }
+
+  class ReferenceIndex #BBDEFB {
+    - values: TimeSeries
+    - base: int
+    + __init__(marketObjectCode: str, source: str | DataFrame, base: int)
+    + to_json(): dict
+  }
+
+  class YieldCurve #BBDEFB {
+    - referenceDate: datetime
+    - tenors: List[str]
+    - rates: List[float]
+    - base: int
+    + __init__(marketObjectCode: str, referenceDate: str | datetime, tenors: List[str], rates: List[float], base: int)
+    + _validate_inputs(): void
+    + _tenors_to_dataframe(): DataFrame
+    + to_json(): dict
+  }
+
+  RiskFactor <|-- ReferenceIndex
+  RiskFactor <|-- YieldCurve
+
+  ' Portfolio
+  class Portfolio #C8E6C9 {
+    - contracts: List[ContractModel]
+    - contract_df: DataFrame
+    + __init__(contracts: List[ContractModel] = None, csvPath: str = None)
+    + _init_from_contracts(contracts: List[ContractModel]): void
+    + _init_from_csv(path: str): List[ContractModel]
+    + write_to_file(path: str): void
+    + to_json(): dict
+  }
+
+  Portfolio "1" o-- "*" ContractModel
+
+  ' Cash Flow Stream
+  class CashFlowStream #C8E6C9 {
+    - portfolio: Portfolio
+    - risk_factors: List[RiskFactor]
+    - events: DataFrame
+    + _parse_events(): DataFrame
+    + show(max_rows: int, full: bool): void
+    + plot(): void
+  }
+
+  CashFlowStream --> Portfolio
+  CashFlowStream --> RiskFactor : uses
+}
+
+' ============================================
+' CONTROLLER LAYER (Purple)
+' ============================================
+package "Controller Layer" #F3E5F5 {
+
+  class ActusService #E1BEE7 {
+    - serverURL: str
+    - externalRiskService: bool
+    + __init__(serverURL: str, externalRiskService: bool = False)
+    + generateEvents(portfolio: Portfolio, riskFactors: List[RiskFactor] = None): CashFlowStream
+    + generateEventsWithExternalRisk(portfolio: Portfolio, scenarioID: str, riskService: RiskService, simulateTo: Any, monitoringTimes: Any): CashFlowStream
+    + extract_required_risk_factors(portfolio: Portfolio): set
+    - _validate_rate_reset_risk_factor_coverage(portfolio: Portfolio, riskFactors: List[RiskFactor]): void
+  }
+
+  class PublicActusService #E1BEE7 {
+    + __init__()
+  }
+
+  class RiskService #E1BEE7 {
+    - serverURL: str
+    + __init__(serverURL: str)
+    + upload_reference_index(risk_factor: ReferenceIndex, riskFactorID: str): int
+    + delete_reference_index(riskFactorID: str): int
+    + find_all_reference_indexes(): list
+    + find_reference_index(riskFactorID: str): dict
+    + create_scenario(scenarioID: str, riskFactorDescriptors: list): int
+    + find_all_scenarios(): list
+  }
+
+  class PublicRiskService #E1BEE7 {
+    + __init__()
+  }
+
+  ActusService <|-- PublicActusService
+  RiskService <|-- PublicRiskService
+}
+
+' ============================================
+' Cross-layer relationships
+' ============================================
+ActusService --> Portfolio : consumes
+ActusService --> RiskFactor : consumes
+ActusService --> CashFlowStream : produces
+
+RiskService --> ReferenceIndex : uploads
+RiskService --> YieldCurve : (optional)
+
+' ============================================
+' Legend
+' ============================================
+legend right
+  |<#C8E6C9>  | Model: Contracts/Portfolio/Streams |
+  |<#FFF9C4>  | Model: Terms |
+  |<#BBDEFB>  | Model: Risk Factors |
+  |<#E1BEE7>  | Controller: Services |
+  ----
+  <b>Flow:</b>
+  Controller takes Portfolio + RiskFactors and generates CashFlowStream
+endlegend
+
+@enduml

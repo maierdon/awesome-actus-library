@@ -1,0 +1,113 @@
+@startuml activity_diagram_alm_workflow_colored
+
+skinparam defaultFontSize 11
+skinparam activityFontSize 11
+skinparam arrowFontSize 10
+skinparam linetype ortho
+
+' Farben passend zum Klassendiagramm (Concrete = White/Black)
+skinparam activity {
+    BackgroundColor White
+    BorderColor Black
+    ArrowColor Black
+}
+
+' Spezielle Farben für Start/Ende und Entscheidungen
+skinparam activityStartColor #90EE90
+skinparam activityEndColor #90EE90
+skinparam activityDiamondBackgroundColor #FFB6C1
+skinparam activityDiamondBorderColor Black
+
+' Notizen im Stil der anderen Diagramme
+skinparam note {
+    BackgroundColor #FFFFE0
+    BorderColor Black
+}
+
+title Activity Diagram: ALM Workflow with Stochastic Rates Extension
+
+start
+
+:Load Market Data;
+note right
+    ZCB prices or
+    Spot rates
+end note
+
+:Calibrate Yield Curve;
+note right
+    CurveCalibrator.from_market()
+    Natural cubic spline interpolation
+    Flat-forward extrapolation
+end note
+
+:Select Short-Rate Model;
+
+if (Requires exact initial fit?) then (yes)
+    :Configure No-Arbitrage Model;
+    note right
+        HoLee or HullWhite
+        Requires <color:blue>CurveCalibrator</color>
+    end note
+else (no)
+    :Configure Equilibrium Model;
+    note right
+        Vasicek or CIR
+        Standalone parameters
+    end note
+endif
+
+:Set Model Parameters;
+note right
+    r0, a, b, σ, seed
+end note
+
+:Run Monte Carlo Simulation;
+note right
+    model.simulate(T, M, I)
+    Returns <color:blue>SimulationResult</color>
+end note
+
+:Convert to ACTUS Scenarios;
+note right
+    simulation_to_scenarios()
+    Creates <color:blue>ScenarioSet</color> with
+    ReferenceIndex objects
+end note
+
+:Define Portfolio;
+note right
+    PAM, ANN contracts
+    with floating rates
+end note
+
+fork
+    :Generate Cash Flows;
+    note right
+        ActusService.generateEvents()
+        iterated over scenarios
+    end note
+fork again
+    :Repeat for all scenarios;
+end fork
+
+:Aggregate Results;
+
+fork
+    :Compute NPV Distribution;
+fork again
+    :Calculate VaR / ES;
+fork again
+    :Analyze Tail Risk;
+end fork
+
+:Generate Reports & Visualizations;
+note right
+    Fan charts
+    NPV histograms
+    Convergence analysis
+end note
+
+stop
+
+@enduml

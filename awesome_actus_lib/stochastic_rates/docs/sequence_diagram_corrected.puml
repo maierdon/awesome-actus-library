@@ -1,0 +1,109 @@
+@startuml sequence_diagram_colored
+
+skinparam defaultFontSize 11
+skinparam sequenceMessageAlign center
+autoactivate on
+
+' Farben passend zum Rest der Thesis
+skinparam participant {
+    BackgroundColor White
+    BorderColor Black
+}
+skinparam actor {
+    BackgroundColor White
+    BorderColor Black
+}
+skinparam note {
+    BackgroundColor #FFFFE0
+    BorderColor Black
+}
+skinparam sequence {
+    ArrowColor Black
+    LifeLineBorderColor Black
+    LifeLineBackgroundColor #E8E8E8
+}
+
+title Sequence Diagram: Stochastic Scenario Generation
+
+actor User
+participant "factory" as Factory
+participant "CurveCalibrator" as Calib
+participant "NaturalCubicSpline1D" as Spline
+participant "HullWhite" as Model
+participant "SimulationResult" as Sim
+participant "integration" as Integ
+participant "ReferenceIndex" as RefIdx
+
+== 1. Market curve calibration ==
+
+User -> Calib: from_market(times, spot_rates)
+    Calib -> Calib: sort and validate inputs
+    Calib -> Calib: compute P from R
+    Calib -> Spline: fit(times, R)
+    return _spline_R
+    Calib -> Calib: compute F_0_tmax (extrapolation)
+return calibrator
+
+== 2. Model instantiation ==
+
+User -> Factory: create_model("hull_white",\n  r0=0.03, a=0.1, sigma=0.01,\n  calibrator=calibrator)
+    Factory -> Model: HullWhite(**params)
+    return model
+return model
+
+== 3. Monte Carlo simulation ==
+
+User -> Model: simulate(T=10.0, M=120, I=1000)
+    Model -> Model: _simulate_impl()
+    note right
+        **Exact OU transition:**
+        exp_a = exp(-a·dt)
+        std = σ·√((1-exp(-2a·dt))/(2a))
+    end note
+    loop for k = 1 to M
+        Model -> Model: theta(t_prev)
+        note right
+            **Drift calibration:**
+            θ(t) = dF/dt + a·F(0,t)
+                 + (σ²/2a)·(1-e^{-2at})
+        end note
+        Model -> Model: r[k] = r[k-1]·exp_a\n       + θ·theta_coeff + std·Z
+    end
+    Model -> Sim: SimulationResult(times, rates)
+return sim
+
+== 4. Statistical analysis (optional) ==
+
+User -> Sim: statistics()
+return {n_paths, terminal_mean, ...}
+
+User -> Model: validate_against_analytical(T=10.0)
+    Model -> Model: zcb_price(0, T)
+    note right: Analytical ZCB price
+    Model -> Model: simulate(n_samples)
+    note right: Monte Carlo estimate
+return {analytical, monte_carlo, rel_error}
+
+== 5. ACTUS integration ==
+
+User -> Integ: simulation_to_scenarios(\n  sim, base_date="2025-01-01",\n  market_code="YC_CHF",\n  freq="M", max_scenarios=50)
+    loop for j = 0 to 49
+        Integ -> Integ: simulation_to_reference_index(sim, path=j)
+            Integ -> RefIdx: ReferenceIndex(marketObjectCode, values)
+            return ref_idx
+        return ref_idx
+    end
+    Integ -> Integ: ScenarioSet(market_code, scenarios)
+return ScenarioSet
+
+== 6. Usage with ACTUS ==
+
+User -> RefIdx: to_json()
+return {marketObjectCode, base, data}
+
+note over User
+    JSON output is ready for
+    ActusService.generateEvents()
+end note
+
+@enduml

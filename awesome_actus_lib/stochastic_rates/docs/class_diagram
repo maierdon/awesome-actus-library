@@ -1,0 +1,324 @@
+@startuml class_diagram_thesis_v3
+
+'=============================================================================
+' STYLING
+'=============================================================================
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam defaultFontSize 11
+skinparam wrapWidth 300
+
+skinparam class {
+    BackgroundColor #FFFFFF
+    BorderColor #333333
+    ArrowColor #333333
+}
+
+skinparam package {
+    BackgroundColor #FAFAFA
+    BorderColor #666666
+}
+
+' Stereotype colors
+skinparam stereotypeCBackgroundColor #C8E6C9
+skinparam stereotypeABackgroundColor #FFCDD2
+
+title Class Diagram: Stochastic Rates Extension
+
+'=============================================================================
+' MODELS PACKAGE
+'=============================================================================
+package "models" #E8F5E9 {
+
+    abstract class ShortRateModel <<abstract>> {
+        __ Attributes __
+        <font color="#B71C1C">+ name: str</font>
+        <font color="#B71C1C">+ r0: float</font>
+        <font color="#B71C1C">+ seed: Optional[int]</font>
+        <font color="#B71C1C">- _rng: Optional[Generator]</font>
+        <font color="#B71C1C">- _sim: Optional[SimulationResult]</font>
+        <font color="#B71C1C">- _cache_enabled: bool</font>
+        __
+        __ Public Methods __
+        <font color="#1B5E20">+ simulate(T, M, I, rng?): SimulationResult</font>
+        <font color="#1B5E20">+ {abstract} zcb_price(t, T, r_t?): float</font>
+        <font color="#1B5E20">+ validate_against_analytical(T, r_t?, n_samples): dict</font>
+        <font color="#1B5E20">+ sample_paths(n): Tuple[ndarray, ndarray]</font>
+        <font color="#1B5E20">+ explain(): str</font>
+        <font color="#1B5E20">+ set_simulation(sim): void</font>
+        <font color="#1B5E20">+ require_simulation(): SimulationResult</font>
+        <font color="#1B5E20">+ reset_rng(): void</font>
+        <font color="#1B5E20">+ no_cache(): ContextManager</font>
+        __
+        __ Template Method __
+        <font color="#1B5E20"># {abstract} _simulate_impl(T, M, I, rng): SimulationResult</font>
+        __
+        __ Properties __
+        <font color="#1B5E20">+ simulation: Optional[SimulationResult]</font>
+    }
+
+    class Vasicek <<concrete>> #C8E6C9 {
+        __ Attributes __
+        <font color="#B71C1C">+ a: float</font>
+        <font color="#B71C1C">+ b: float</font>
+        <font color="#B71C1C">+ sigma: float</font>
+        __
+        __ Methods __
+        <font color="#1B5E20">+ zcb_price(t, T, r_t?): float</font>
+        <font color="#1B5E20"># _simulate_impl(T, M, I, rng): SimulationResult</font>
+    }
+
+    class CIR <<concrete>> #C8E6C9 {
+        __ Attributes __
+        <font color="#B71C1C">+ a: float</font>
+        <font color="#B71C1C">+ b: float</font>
+        <font color="#B71C1C">+ sigma: float</font>
+        __
+        __ Methods __
+        <font color="#1B5E20">+ zcb_price(t, T, r_t?): float</font>
+        <font color="#1B5E20"># _simulate_impl(T, M, I, rng): SimulationResult</font>
+    }
+
+    class HoLee <<concrete>> #C8E6C9 {
+        __ Attributes __
+        <font color="#B71C1C">+ sigma: float</font>
+        <font color="#B71C1C">+ cal: CurveCalibrator</font>
+        __
+        __ Methods __
+        <font color="#1B5E20">+ theta(t): float</font>
+        <font color="#1B5E20">+ zcb_price(t, T, r_t?): float</font>
+        <font color="#1B5E20"># _simulate_impl(T, M, I, rng): SimulationResult</font>
+    }
+
+    class HullWhite <<concrete>> #C8E6C9 {
+        __ Attributes __
+        <font color="#B71C1C">+ a: float</font>
+        <font color="#B71C1C">+ sigma: float</font>
+        <font color="#B71C1C">+ cal: CurveCalibrator</font>
+        __
+        __ Methods __
+        <font color="#1B5E20">+ theta(t): float</font>
+        <font color="#1B5E20">+ zcb_price(t, T, r_t?): float</font>
+        <font color="#1B5E20"># _simulate_impl(T, M, I, rng): SimulationResult</font>
+    }
+
+    note bottom of Vasicek #FFFDE7
+        <b>SDE:</b> dr = a(b − r)dt + σdW
+        <b>Simulation:</b> Exact OU transition
+        <b>Feature:</b> Mean-reverting Gaussian
+    end note
+
+    note bottom of CIR #FFFDE7
+        <b>SDE:</b> dr = a(b − r)dt + σ√r dW
+        <b>Simulation:</b> Non-central χ² sampling
+        <b>Feature:</b> Non-negative rates (Feller)
+    end note
+
+    note bottom of HoLee #FFFDE7
+        <b>SDE:</b> dr = θ(t)dt + σdW
+        <b>Simulation:</b> Analytically exact
+        <b>Feature:</b> No-arbitrage curve fit
+    end note
+
+    note bottom of HullWhite #FFFDE7
+        <b>SDE:</b> dr = (θ(t) − ar)dt + σdW
+        <b>Simulation:</b> Exact OU transition
+        <b>Feature:</b> No-arbitrage + mean reversion
+    end note
+
+    ShortRateModel <|-- Vasicek
+    ShortRateModel <|-- CIR
+    ShortRateModel <|-- HoLee
+    ShortRateModel <|-- HullWhite
+}
+
+'=============================================================================
+' CALIBRATION PACKAGE
+'=============================================================================
+package "calibration" #E3F2FD {
+
+    class CurveCalibrator <<dataclass, frozen>> #BBDEFB {
+        __ Stored Curve Data __
+        <font color="#B71C1C">+ times: ndarray</font>
+        <font color="#B71C1C">+ P: ndarray</font>
+        <font color="#B71C1C">+ R: ndarray</font>
+        <font color="#B71C1C">+ t_min: float</font>
+        <font color="#B71C1C">+ t_max: float</font>
+        <font color="#B71C1C">+ P_0_tmax: float</font>
+        <font color="#B71C1C">+ F_0_tmax: float</font>
+        <font color="#B71C1C">+ extrapolation_mode: Literal["flat", "strict"]</font>
+        <font color="#B71C1C">- _spline_R: NaturalCubicSpline1D</font>
+        __
+        __ Factory Method __
+        <font color="#1B5E20">+ {static} from_market(times, zcb_prices?, spot_rates?, extrapolation_mode): CurveCalibrator</font>
+        __
+        __ Curve Queries __
+        <font color="#1B5E20">+ spot_rate(t): float | ndarray</font>
+        <font color="#1B5E20">+ zcb_price(t): float | ndarray</font>
+        <font color="#1B5E20">+ forward_rate(t): float | ndarray</font>
+        <font color="#1B5E20">+ forward_rate_slope(t): float | ndarray</font>
+        __
+        __ Internal __
+        <font color="#1B5E20">- _check_extrapolation(t): void</font>
+    }
+
+    class NaturalCubicSpline1D <<dataclass, frozen>> #BBDEFB {
+        __ Spline Data __
+        <font color="#B71C1C">+ x: ndarray</font>
+        <font color="#B71C1C">+ y: ndarray</font>
+        <font color="#B71C1C">+ m: ndarray</font>
+        __
+        __ Factory Method __
+        <font color="#1B5E20">+ {static} fit(x, y): NaturalCubicSpline1D</font>
+        __
+        __ Evaluation __
+        <font color="#1B5E20">+ evaluate(xq): float | ndarray</font>
+        <font color="#1B5E20">+ evaluate_first_derivative(xq): float | ndarray</font>
+        <font color="#1B5E20">+ evaluate_second_derivative(xq): float | ndarray</font>
+        __
+        __ Internal __
+        <font color="#1B5E20">- _interval_indices(xq): ndarray</font>
+    }
+
+    CurveCalibrator *-right- NaturalCubicSpline1D : contains
+}
+
+'=============================================================================
+' SIMULATION PACKAGE
+'=============================================================================
+package "simulation" #FFF3E0 {
+
+    class SimulationResult <<dataclass>> #FFE0B2 {
+        __ Core Data __
+        <font color="#B71C1C">+ times: ndarray</font>
+        <font color="#B71C1C">+ rates: ndarray</font>
+        __
+        __ Properties __
+        <font color="#1B5E20">+ n_steps: int</font>
+        <font color="#1B5E20">+ n_paths: int</font>
+        <font color="#1B5E20">+ horizon: float</font>
+        <font color="#1B5E20">+ dt: float</font>
+        __
+        __ Path Statistics __
+        <font color="#1B5E20">+ mean_path(): ndarray</font>
+        <font color="#1B5E20">+ std_path(): ndarray</font>
+        <font color="#1B5E20">+ percentile_path(q): ndarray</font>
+        <font color="#1B5E20">+ terminal_distribution(): ndarray</font>
+        <font color="#1B5E20">+ rate_at_time(t): ndarray</font>
+        __
+        __ Analysis __
+        <font color="#1B5E20">+ statistics(): dict</font>
+        <font color="#1B5E20">+ convergence_analysis(target_stat, path_sizes): DataFrame</font>
+        __
+        __ Validation __
+        <font color="#1B5E20">+ assert_valid(): void</font>
+    }
+}
+
+'=============================================================================
+' INTEGRATION PACKAGE
+'=============================================================================
+package "integration" #F3E5F5 {
+
+    class ScenarioSet <<dataclass, frozen>> #E1BEE7 {
+        __ Attributes __
+        <font color="#B71C1C">+ market_code: str</font>
+        <font color="#B71C1C">+ scenarios: Dict[str, ReferenceIndex]</font>
+        __
+        __ Iteration __
+        <font color="#1B5E20">+ __len__(): int</font>
+        <font color="#1B5E20">+ __iter__(): Iterator</font>
+        <font color="#1B5E20">+ scenario_names(): List[str]</font>
+    }
+
+    class "<<module>>\nintegration" as IntegrationModule #E1BEE7 {
+        __
+        __ Functions __
+        <font color="#1B5E20">+ simulation_to_reference_index(sim, base_date, market_code, path?, freq?): ReferenceIndex</font>
+        <font color="#1B5E20">+ simulation_to_scenarios(sim, base_date, market_code, max_scenarios?, freq?, name_prefix?): ScenarioSet</font>
+        <font color="#1B5E20">+ supported_frequencies(): List[str]</font>
+    }
+}
+
+'=============================================================================
+' FACTORY PACKAGE
+'=============================================================================
+package "factory" #FCE4EC {
+
+    class ModelInfo <<dataclass, frozen>> #F8BBD9 {
+        __ Metadata __
+        <font color="#B71C1C">+ key: str</font>
+        <font color="#B71C1C">+ title: str</font>
+        <font color="#B71C1C">+ strengths: List[str]</font>
+        <font color="#B71C1C">+ limitations: List[str]</font>
+        <font color="#B71C1C">+ suited_for: List[str]</font>
+    }
+
+    class "<<module>>\nfactory" as FactoryModule #F8BBD9 {
+        __ Registry __
+        <font color="#B71C1C">+ MODEL_CATALOG: Dict[str, ModelInfo]</font>
+        __
+        __ Functions __
+        <font color="#1B5E20">+ available_models(): List[str]</font>
+        <font color="#1B5E20">+ describe_models(): List[ModelInfo]</font>
+        <font color="#1B5E20">+ create_model(model, **params): ShortRateModel</font>
+    }
+
+    FactoryModule o-- ModelInfo : contains
+}
+
+'=============================================================================
+' EXTERNAL AAL DEPENDENCY
+'=============================================================================
+package "awesome_actus_lib.models" #ECEFF1 {
+
+    class ReferenceIndex <<external>> #CFD8DC {
+        <font color="#B71C1C">+ marketObjectCode: str</font>
+        <font color="#B71C1C">+ source: DataFrame</font>
+        __
+        <font color="#1B5E20">+ to_json(): dict</font>
+    }
+}
+
+'=============================================================================
+' RELATIONSHIPS
+'=============================================================================
+' Calibrator dependencies
+HoLee --> CurveCalibrator : requires
+HullWhite --> CurveCalibrator : requires
+
+' Simulation flow
+ShortRateModel ..> SimulationResult : creates
+
+' Integration dependencies
+IntegrationModule ..> SimulationResult : consumes
+IntegrationModule ..> ScenarioSet : creates
+IntegrationModule ..> ReferenceIndex : produces
+ScenarioSet o-- ReferenceIndex : contains
+
+' Factory dependencies
+FactoryModule ..> ShortRateModel : instantiates
+
+'=============================================================================
+' LEGEND
+'=============================================================================
+legend right
+    |<#FFCDD2>    | Abstract Class |
+    |<#C8E6C9>    | Concrete Model |
+    |<#BBDEFB>    | Calibration |
+    |<#FFE0B2>    | Simulation |
+    |<#E1BEE7>    | Integration |
+    |<#F8BBD9>    | Factory |
+    |<#CFD8DC>    | External (AAL) |
+    ----
+    <font color="#B71C1C">Red</font> = Attributes
+    <font color="#1B5E20">Green</font> = Methods
+    ----
+    <b>Design Patterns:</b>
+    • Template Method (simulate → _simulate_impl)
+    • Factory (create_model)
+    • Strategy (interchangeable models)
+    • Adapter (simulation → ReferenceIndex)
+endlegend
+
+@enduml

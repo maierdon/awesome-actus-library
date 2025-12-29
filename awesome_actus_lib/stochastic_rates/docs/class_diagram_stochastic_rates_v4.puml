@@ -1,0 +1,215 @@
+@startuml class_diagram_stochastic_rates_colored
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam defaultFontSize 11
+
+title Stochastic Rates Extension
+
+' ---------------------------
+' MODELS PACKAGE
+' ---------------------------
+package "models" {
+
+    abstract class ShortRateModel {
+        <font color="red">●</font> r0: float
+        <font color="red">●</font> seed: Optional[int]
+        <font color="red">●</font> _rng: Optional[Generator]
+        <font color="red">●</font> _sim: Optional[SimulationResult]
+        <font color="red">●</font> _cache_enabled: bool
+        --
+        <font color="green">●</font> __init__(r0: float, seed: Optional[int])
+        <font color="green">●</font> simulate(T, M, I, rng?): SimulationResult
+        <font color="green">●</font> {abstract} zcb_price(t, T, r_t?): float
+        <font color="green">●</font> validate_against_analytical(T, r_t?, n_samples): dict
+        <font color="green">●</font> sample_paths(n): Tuple[ndarray, ndarray]
+        <font color="green">●</font> explain(): str
+        <font color="green">●</font> set_simulation(sim): void
+        <font color="green">●</font> require_simulation(): SimulationResult
+        <font color="green">●</font> reset_rng(): void
+        <font color="green">●</font> no_cache(): ContextManager
+        <font color="orange">●</font> {abstract} _simulate_impl(T, M, I, rng): SimulationResult
+    }
+
+    class Vasicek {
+        <font color="red">●</font> a: float
+        <font color="red">●</font> b: float
+        <font color="red">●</font> sigma: float
+        --
+        <font color="green">●</font> __init__(r0, a, b, sigma, seed?)
+        <font color="green">●</font> zcb_price(t, T, r_t?): float
+        <font color="orange">●</font> _simulate_impl(T, M, I, rng): SimulationResult
+    }
+
+    class CIR {
+        <font color="red">●</font> a: float
+        <font color="red">●</font> b: float
+        <font color="red">●</font> sigma: float
+        --
+        <font color="green">●</font> __init__(r0, a, b, sigma, seed?)
+        <font color="green">●</font> zcb_price(t, T, r_t?): float
+        <font color="orange">●</font> _simulate_impl(T, M, I, rng): SimulationResult
+    }
+
+    class HoLee {
+        <font color="red">●</font> sigma: float
+        <font color="red">●</font> cal: CurveCalibrator
+        --
+        <font color="green">●</font> __init__(r0, sigma, calibrator, seed?)
+        <font color="green">●</font> theta(t): float
+        <font color="green">●</font> zcb_price(t, T, r_t?): float
+        <font color="orange">●</font> _simulate_impl(T, M, I, rng): SimulationResult
+    }
+
+    class HullWhite {
+        <font color="red">●</font> a: float
+        <font color="red">●</font> sigma: float
+        <font color="red">●</font> cal: CurveCalibrator
+        --
+        <font color="green">●</font> __init__(r0, a, sigma, calibrator, seed?)
+        <font color="green">●</font> theta(t): float
+        <font color="green">●</font> zcb_price(t, T, r_t?): float
+        <font color="orange">●</font> _simulate_impl(T, M, I, rng): SimulationResult
+    }
+
+    ShortRateModel <|-- Vasicek
+    ShortRateModel <|-- CIR
+    ShortRateModel <|-- HoLee
+    ShortRateModel <|-- HullWhite
+}
+
+' ---------------------------
+' CALIBRATION PACKAGE
+' ---------------------------
+package "calibration" {
+
+    class CurveCalibrator {
+        <font color="red">●</font> times: ndarray
+        <font color="red">●</font> P: ndarray
+        <font color="red">●</font> R: ndarray
+        <font color="red">●</font> t_min: float
+        <font color="red">●</font> t_max: float
+        <font color="red">●</font> P_0_tmax: float
+        <font color="red">●</font> F_0_tmax: float
+        <font color="red">●</font> extrapolation_mode: Literal["flat", "strict"]
+        <font color="red">●</font> _spline_R: NaturalCubicSpline1D
+        --
+        <font color="green">●</font> {static} from_market(times, zcb_prices?, spot_rates?, extrapolation_mode): CurveCalibrator
+        <font color="green">●</font> spot_rate(t): float | ndarray
+        <font color="green">●</font> zcb_price(t): float | ndarray
+        <font color="green">●</font> forward_rate(t): float | ndarray
+        <font color="green">●</font> forward_rate_slope(t): float | ndarray
+        <font color="red">●</font> _check_extrapolation(t): void
+    }
+
+    class NaturalCubicSpline1D {
+        <font color="red">●</font> x: ndarray
+        <font color="red">●</font> y: ndarray
+        <font color="red">●</font> m: ndarray
+        --
+        <font color="green">●</font> {static} fit(x, y): NaturalCubicSpline1D
+        <font color="green">●</font> evaluate(xq): float | ndarray
+        <font color="green">●</font> evaluate_first_derivative(xq): float | ndarray
+        <font color="green">●</font> evaluate_second_derivative(xq): float | ndarray
+        <font color="red">●</font> _interval_indices(xq): ndarray
+    }
+
+    CurveCalibrator *-- NaturalCubicSpline1D
+}
+
+' ---------------------------
+' SIMULATION PACKAGE
+' ---------------------------
+package "simulation" {
+
+    class SimulationResult {
+        <font color="red">●</font> times: ndarray
+        <font color="red">●</font> rates: ndarray
+        --
+        <font color="green">●</font> n_steps: int
+        <font color="green">●</font> n_paths: int
+        <font color="green">●</font> horizon: float
+        <font color="green">●</font> dt: float
+        <font color="green">●</font> mean_path(): ndarray
+        <font color="green">●</font> std_path(): ndarray
+        <font color="green">●</font> percentile_path(q): ndarray
+        <font color="green">●</font> terminal_distribution(): ndarray
+        <font color="green">●</font> rate_at_time(t): ndarray
+        <font color="green">●</font> statistics(): dict
+        <font color="green">●</font> convergence_analysis(target_stat, path_sizes): DataFrame
+        <font color="green">●</font> assert_valid(): void
+    }
+}
+
+' ---------------------------
+' INTEGRATION PACKAGE
+' ---------------------------
+package "integration" {
+
+    class ScenarioSet {
+        <font color="red">●</font> market_code: str
+        <font color="red">●</font> scenarios: Dict[str, ReferenceIndex]
+        --
+        <font color="green">●</font> __len__(): int
+        <font color="green">●</font> __iter__(): Iterator
+        <font color="green">●</font> scenario_names(): List[str]
+    }
+
+    class "<<module>> integration" as IntegrationModule {
+        <font color="green">●</font> simulation_to_reference_index(sim, base_date, market_code, path?, freq?): ReferenceIndex
+        <font color="green">●</font> simulation_to_scenarios(sim, base_date, market_code, max_scenarios?, freq?, name_prefix?): ScenarioSet
+        <font color="green">●</font> supported_frequencies(): List[str]
+    }
+}
+
+' ---------------------------
+' FACTORY PACKAGE
+' ---------------------------
+package "factory" {
+
+    class ModelInfo {
+        <font color="red">●</font> key: str
+        <font color="red">●</font> title: str
+        <font color="red">●</font> strengths: List[str]
+        <font color="red">●</font> limitations: List[str]
+        <font color="red">●</font> suited_for: List[str]
+    }
+
+    class "<<module>> factory" as FactoryModule {
+        <font color="red">●</font> MODEL_CATALOG: Dict[str, ModelInfo]
+        --
+        <font color="green">●</font> available_models(): List[str]
+        <font color="green">●</font> describe_models(): List[ModelInfo]
+        <font color="green">●</font> create_model(model, **params): ShortRateModel
+    }
+
+    FactoryModule o-- ModelInfo
+}
+
+' ---------------------------
+' EXTERNAL AAL (from existing library)
+' ---------------------------
+package "awesome_actus_lib.models" {
+
+    class ReferenceIndex {
+        <font color="red">●</font> marketObjectCode: str
+        <font color="red">●</font> values: TimeSeries
+        --
+        <font color="green">●</font> __init__(marketObjectCode, source)
+        <font color="green">●</font> to_json(): dict
+    }
+}
+
+' ---------------------------
+' RELATIONSHIPS
+' ---------------------------
+HoLee --> CurveCalibrator
+HullWhite --> CurveCalibrator
+ShortRateModel ..> SimulationResult : creates
+IntegrationModule ..> SimulationResult : consumes
+IntegrationModule ..> ScenarioSet : creates
+IntegrationModule ..> ReferenceIndex : produces
+ScenarioSet o-- ReferenceIndex
+FactoryModule ..> ShortRateModel : instantiates
+
+@enduml

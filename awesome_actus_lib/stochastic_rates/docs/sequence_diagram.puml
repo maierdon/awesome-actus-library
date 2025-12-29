@@ -1,0 +1,94 @@
+@startuml sequence_diagram
+skinparam style strictuml
+autoactivate on
+
+title Sequence Diagram: Stochastic Scenario Generation
+
+actor User
+participant "factory" as Factory
+participant "CurveCalibrator" as Calib
+participant "HullWhite\n(ShortRateModel)" as Model
+participant "SimulationResult" as Sim
+participant "integration" as Integ
+participant "ReferenceIndex" as RefIdx
+
+== 1. Market curve calibration ==
+
+User -> Calib: from_market(times, spot_rates)
+    Calib -> Calib: _tenors_to_dataframe()
+    Calib -> Calib: NaturalCubicSpline1D.fit()
+    return spline
+return calibrator
+
+== 2. Model instantiation ==
+
+User -> Factory: create_model("hull_white",\n  r0=0.01, a=0.05, sigma=0.01,\n  calibrator=calibrator)
+    Factory -> Model: HullWhite(**params)
+    return model
+return model
+
+== 3. Monte Carlo simulation ==
+
+User -> Model: simulate(T=5.0, M=60, I=1000)
+    Model -> Model: _simulate_impl()
+    note right
+  Exact Ornstein–Uhlenbeck transition:
+  r(t+dt) = r(t)·exp(-a·dt)
+            + θ(t)·(1-exp(-a·dt))/a
+            + σ·√var·Z
+    end note
+    loop for each time step k=1..M
+        Model -> Calib: forward_rate(t)
+        return F(0,t)
+        Model -> Calib: forward_rate_slope(t)
+        return dF/dt
+        Model -> Model: theta(t) = dF/dt + a·F + convexity
+        Model -> Model: r[k] = r[k-1]·exp_a + θ·coeff + σ·√var·Z
+    end
+    Model -> Sim: SimulationResult(times, rates)
+    Sim -> Sim: assert_valid()
+    return sim_obj
+return sim_obj
+
+== 4. Statistical analysis (optional) ==
+
+User -> Sim: statistics()
+return {n_paths, terminal_mean, ...}
+
+User -> Sim: mean_path()
+return mean_rates[M+1]
+
+User -> Model: validate_against_analytical(T=5.0)
+    Model -> Model: zcb_price(0, T)
+    return P_analytical
+    Model -> Model: no_cache() context
+    Model -> Model: simulate(T, M, n_samples)
+    Model -> Model: Monte Carlo ZCB
+    return {analytical, monte_carlo, rel_error_pct}
+return validation_dict
+
+== 5. ACTUS integration ==
+
+User -> Integ: simulation_to_scenarios(\n  sim, base_date="2025-01-01",\n  market_code="YC_CHF",\n  freq="M", max_scenarios=100)
+    loop for each path j=0..99
+        Integ -> Integ: simulation_to_reference_index(sim, path=j)
+            Integ -> Integ: _parse_freq("M")
+            Integ -> Integ: pd.date_range(start, periods, freq)
+            Integ -> RefIdx: ReferenceIndex(market_code, df)
+            return ref_idx
+        return ref_idx
+    end
+    Integ -> Integ: ScenarioSet(market_code, scenarios)
+return ScenarioSet
+
+== 6. Usage in ACTUS ==
+
+User -> RefIdx: to_json()
+return {marketObjectCode, base, data: [{time, value}, ...]}
+
+note over User
+  The JSON can now be used directly
+  in the ACTUS event engine.
+end note
+
+@enduml
